@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox Place Explorer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #050505;
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-bg-hover: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-border-hover: rgba(255, 255, 255, 0.35);
+      --glass-glow: rgba(255, 255, 255, 0.15);
+      --text-main: #ffffff;
+      --text-muted: #888888;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 80px 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Mesh */
+    .bg-glow-1, .bg-glow-2 {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.25;
+      animation: float 14s infinite alternate ease-in-out;
+    }
+
+    .bg-glow-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, #ffffff 0%, #333333 100%);
+      top: -100px;
+      left: -100px;
+    }
+
+    .bg-glow-2 {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, #888888 0%, #000000 100%);
+      bottom: -150px;
+      right: -100px;
+      animation-delay: -7s;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(60px, 40px) scale(1.1); }
+      100% { transform: translate(-40px, 80px) scale(0.9); }
+    }
+
+    .header-title {
+      font-size: 2.2rem;
+      font-weight: 500;
+      letter-spacing: -0.5px;
+      margin-bottom: 30px;
+      opacity: 0.95;
+    }
+
+    /* Search + Discord Bar */
+    .controls-container {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 50px;
+    }
+
+    .search-container {
+      flex: 1;
+      position: relative;
+    }
+
+    .search-container i {
+      position: absolute;
+      left: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .search-bar {
+      width: 100%;
+      padding: 18px 24px 18px 54px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 40px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .search-bar:focus {
+      background: var(--glass-bg-hover);
+      border-color: var(--glass-border-hover);
+      box-shadow: 0 0 25px var(--glass-glow);
+    }
+
+    .discord-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 28px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 40px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .discord-btn:hover {
+      background: var(--glass-bg-hover);
+      border-color: var(--glass-border-hover);
+      box-shadow: 0 0 25px var(--glass-glow);
+      transform: translateY(-2px);
+    }
+
+    /* Grid Layout */
+    .results-container {
+      width: 100%;
+      max-width: 1100px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    /* Glass Cards */
+    .card {
+      position: relative;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .card:hover {
+      transform: translateY(-4px) scale(1.01);
+      background: var(--glass-bg-hover);
+      border-color: var(--glass-border-hover);
+      box-shadow: 0 12px 40px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .thumbnail-box {
+      width: 100%;
+      height: 140px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .thumbnail-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .card:hover .thumbnail-img {
+      transform: scale(1.05);
+    }
+
+    .fallback-icon {
+      font-size: 2rem;
+      color: var(--text-muted);
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      word-break: break-word;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .card-path {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: rgba(20, 20, 20, 0.85);
+      border: 1px solid var(--glass-border-hover);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 450px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      position: relative;
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: var(--text-main);
+    }
+
+    .modal-thumb {
+      width: 100%;
+      height: 200px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .modal-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px;
+      background: var(--text-main);
+      color: #000;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .download-btn:hover {
+      background: #e0e0e0;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    .status-msg {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding: 50px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="header-title">Place Files</div>
+
+  <div class="controls-container">
+    <div class="search-container">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="search-input" class="search-bar" placeholder="Search .rbxl files...">
+    </div>
+    <a href="https://discord.gg/zgvYeCtA8Q" target="_blank" class="discord-btn">
+      <i class="fa-brands fa-discord"></i> Discord
+    </a>
+  </div>
+
+  <div class="results-container" id="results-grid">
+    <div class="status-msg">Fetching directory...</div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-card">
+      <button class="close-btn" id="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      <div id="modal-thumb-container"></div>
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-desc" id="modal-path" style="margin-top: 6px;"></div>
+      </div>
+      <a href="#" id="modal-download" class="download-btn" target="_blank" download>
+        <i class="fa-solid fa-arrow-down"></i> Download File
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const owner = 'BrokenCola';
+    const repo = 'Files';
+    let placeFiles = [];
+    let imageMap = {};
+
+    const resultsGrid = document.getElementById('results-grid');
+    const searchInput = document.getElementById('search-input');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalClose = document.getElementById('modal-close');
+    const modalTitle = document.getElementById('modal-title');
+    const modalPath = document.getElementById('modal-path');
+    const modalDownload = document.getElementById('modal-download');
+    const modalThumbContainer = document.getElementById('modal-thumb-container');
+
+    async function fetchRepoFiles() {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`);
+        
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: Unable to reach repository.`);
+        }
+
+        const data = await response.json();
+        const validImages = ['.png', '.jpg', '.jpeg', '.webp'];
+
+        // Map images by their filename without extension
+        data.tree.forEach(file => {
+          if (file.type === 'blob') {
+            const ext = file.path.substring(file.path.lastIndexOf('.')).toLowerCase();
+            if (validImages.includes(ext)) {
+              const baseName = file.path.substring(0, file.path.lastIndexOf('.'));
+              imageMap[baseName] = `https://raw.githubusercontent.com/${owner}/${repo}/main/${file.path}`;
+            }
+          }
+        });
+
+        // Filter for Roblox place files (.rbxl or .rblx)
+        placeFiles = data.tree.filter(file => 
+          file.type === 'blob' && (file.path.endsWith('.rbxl') || file.path.endsWith('.rblx'))
+        );
+
+        renderFiles(placeFiles);
+      } catch (error) {
+        resultsGrid.innerHTML = `<div class="status-msg" style="color: #ff5555;">${error.message}</div>`;
+      }
+    }
+
+    function renderFiles(files) {
+      resultsGrid.innerHTML = '';
+
+      if (files.length === 0) {
+        resultsGrid.innerHTML = '<div class="status-msg">No Roblox place files found.</div>';
+        return;
+      }
+
+      files.forEach(file => {
+        const fileName = file.path.split('/').pop();
+        const baseName = file.path.substring(0, file.path.lastIndexOf('.'));
+        const imageUrl = imageMap[baseName];
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="thumbnail-box">
+            ${imageUrl 
+              ? `<img src="${imageUrl}" class="thumbnail-img" alt="${fileName}" loading="lazy">` 
+              : `<i class="fa-solid fa-cube fallback-icon"></i>`}
+          </div>
+          <div class="card-body">
+            <div class="card-title">${fileName}</div>
+            <div class="card-path">${file.path}</div>
+          </div>
+        `;
+
+        // Open Modal on Card Click
+        card.addEventListener('click', () => openModal(file, fileName, imageUrl));
+        resultsGrid.appendChild(card);
+      });
+    }
+
+    function openModal(file, fileName, imageUrl) {
+      const downloadUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${file.path}`;
+      
+      modalTitle.textContent = fileName;
+      modalPath.textContent = file.path;
+      modalDownload.href = downloadUrl;
+
+      if (imageUrl) {
+        modalThumbContainer.innerHTML = `<img src="${imageUrl}" class="modal-thumb" alt="${fileName}">`;
+      } else {
+        modalThumbContainer.innerHTML = `<div class="modal-thumb"><i class="fa-solid fa-cube fallback-icon" style="font-size: 3rem;"></i></div>`;
+      }
+
+      modalOverlay.classList.add('active');
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('active');
+    }
+
+    modalClose.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = placeFiles.filter(file => file.path.toLowerCase().includes(query));
+      renderFiles(filtered);
+    });
+
+    fetchRepoFiles();
+  </script>
+</body>
+</html>
